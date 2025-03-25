@@ -1,4 +1,5 @@
 import axios from "axios";
+import UserStorage from "../utils/UserStorage";
 
 const BASE_URL = "http://localhost:8080/auth"; //Backend API base Url
 const AUTH_HEADER = "authorization"; // Case-sensitive
@@ -11,24 +12,29 @@ export const registerCompany = async(sigupRequestDTO)=>{
 
 export const loginClient = async (loginRequestDTO) => {
   try {
-    // const response = await axios.post(`${BASE_URL}/authenticate`, {
-    //   username: loginRequestDTO.email, // Ensure correct key
-    //   password: loginRequestDTO.passwod,
-    // });
     const response = await axios.post(`${BASE_URL}/authenticate`, {
-      username: loginRequestDTO.email, // Ensure correct key
+      username: loginRequestDTO.email,
       password: loginRequestDTO.password,
     }, {
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
     });
 
     console.log("Response:", response);
+    
+    // Validate response data structure
+    if (!response.data || !response.data.token || !response.data.role) {
+      throw new Error("Invalid response structure from API");
+    }
 
-    const token = response.data.token; // Read token from response body
-    localStorage.setItem("token", token); // Store token for future use
-    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    const { token, role } = response.data;
+
+    // Save token & user
+    UserStorage.saveToken(token);
+    UserStorage.saveUser(response.data);
+
+    // Ensure storage is working
+    console.log("Stored Token:", UserStorage.getToken());
+    console.log("Stored Role:", UserStorage.getUserRole());
 
     return response.data;
   } catch (error) {
